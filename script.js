@@ -38,23 +38,16 @@ const account1 = {
   interestRate: 1.2, // %
   pin: 1111,
   depositAmount() {
-    let deposit = 0;
-    this.movements.forEach(mov => {
-      if (mov > 0) {
-        deposit += mov;
-      }
-      labelSumIn.innerHTML = `${deposit}€`;
-    });
+    let deposit = this.movements
+      .filter(mov => mov > 0)
+      .reduce((cur, val) => cur + val, 0);
+    labelSumIn.innerHTML = `${deposit}€`;
   },
   withdrawAmount() {
-    let withdraw = 0;
-    this.movements.forEach(mov => {
-      if (mov < 0) {
-        withdraw += mov;
-      }
-
-      labelSumOut.innerHTML = `${withdraw}€`;
-    });
+    let withdraw = this.movements
+      .filter(mov => mov < 0)
+      .reduce((cur, val) => cur + val, 0);
+    labelSumOut.innerHTML = `${withdraw}€`;
   },
   welcome() {
     labelWelcome.innerHTML = `Welcome back , ${this.owner.split(' ')[0]}`;
@@ -121,18 +114,6 @@ const account4 = {
 
 const accounts = [account1, account2, account3, account4];
 
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-// LECTURES
-
-const currencies = new Map([
-  ['USD', 'United States dollar'],
-  ['EUR', 'Euro'],
-  ['GBP', 'Pound sterling'],
-]);
-
-const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
-
 function clearInput() {
   inputLoginUsername.value = '';
   inputLoginPin.value = '';
@@ -151,18 +132,17 @@ let clickState = false;
 //Login Click
 btnLogin.addEventListener('click', e => {
   e.preventDefault();
-  accounts.forEach((curAcc, index) => {
-    if (
+  currentUser = accounts.find((curAcc, index) => {
+    return (
       inputLoginUsername.value == curAcc.nickName &&
       inputLoginPin.value == curAcc.pin
-    ) {
-      currentUser = curAcc;
-      account1.welcome.bind(curAcc)();
-      account1.movementRender.bind(curAcc)(curAcc.movements);
-      currentAmount(curAcc);
-      clearInput();
-    }
+    );
   });
+
+  account1.welcome.bind(currentUser)();
+  account1.movementRender.bind(currentUser)(currentUser.movements);
+  currentAmount(currentUser);
+  clearInput();
 });
 
 //Logout Click
@@ -181,22 +161,18 @@ btnClose.addEventListener('click', e => {
 //SORT MOVEMENTS
 btnSort.addEventListener('click', () => {
   clickState = !clickState;
-  let arr1 = [];
-  let arr2 = [];
-  let orgArr = currentUser.movements;
+
+  let arr1 = currentUser.movements.filter(mov => mov > 0).sort((a, b) => a - b);
+  let arr2 = currentUser.movements.filter(mov => mov < 0).sort((a, b) => a - b);
+
   if (clickState) {
-    orgArr.forEach(mov => {
-      mov > 0 ? arr1.push(mov) : arr2.push(mov);
-    });
     account1.movementRender.bind(currentUser)([...arr2, ...arr1]);
   } else {
-    console.log(currentUser.movements);
-    account1.movementRender.bind(currentUser)(orgArr);
+    account1.movementRender.bind(currentUser)(currentUser.movements);
   }
 });
 
 //Current Amount
-
 function currentAmount(user) {
   account1.depositAmount.bind(user)();
   account1.withdrawAmount.bind(user)();
@@ -223,19 +199,18 @@ btnLoan.addEventListener('click', e => {
 //Transfer to Other
 btnTransfer.addEventListener('click', e => {
   e.preventDefault();
-  accounts.forEach((curAcc, index) => {
-    if (
+  let TransferAcc = accounts.find((curAcc, index) => {
+    return (
       inputTransferTo.value == curAcc.nickName &&
       inputTransferTo.value != currentUser.nickName &&
       Number(inputTransferAmount.value) <=
         Number(labelBalance.innerHTML.slice(0, -1))
-    ) {
-      curAcc.movements.push(Number(inputTransferAmount.value));
-      currentUser.movements.push(-Number(inputTransferAmount.value));
-      account1.movementRender.bind(currentUser)(currentUser.movements);
-      currentAmount(currentUser);
-      console.log(currentUser.movements);
-      clearInput();
-    }
+    );
   });
+
+  TransferAcc.movements.push(Number(inputTransferAmount.value));
+  currentUser.movements.push(-Number(inputTransferAmount.value));
+  account1.movementRender.bind(currentUser)(currentUser.movements);
+  currentAmount(currentUser);
+  clearInput();
 });
